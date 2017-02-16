@@ -28,18 +28,18 @@
  *       Format!
  *
  * === User information ===
- * Group: 
+ * Group: Tres Hombres Cinco Cojones
  * User 1: Gunnlaugur15
  * SSN: 1707952889
  * User 2: Hjalmarh15
  * SSN: 1510933379 
- * User 3: 
- * SSN: X
+ * User 3: Fridrik14
+ * SSN: 2911942659
  * === End User Information ===
  ********************************************************/
 team_t team = {
     /* Group name */
-    "AA_AmnesiacAnonymous",
+    "Tres Hombres Cinco Cojones",
     /* First member's full name */
     "Gunnlaugur Kristinn Hreidarsson Calvi",
     /* First member's email address */
@@ -49,9 +49,9 @@ team_t team = {
     /* Second member's email address (leave blank if none) */
     "hjalmarh15@ru.is",
     /* Third full name (leave blank if none) */
-    "",
+    "Fridirik Thor Hjalmarsson",
     /* Third member's email address (leave blank if none) */
-    ""
+    "Fridrik14@ru.is"
 };
 
 /* single word (4) or double word (8) alignment */
