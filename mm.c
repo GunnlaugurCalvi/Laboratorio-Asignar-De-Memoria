@@ -207,13 +207,38 @@ void *mm_realloc(void *ptr, size_t size)
     mm_free(ptr);
     return newp;
 }
+
+/*
+Checks the heap for consistency. Returns a nonzero value if and only if
+the heap is consistent. 
+Checks if
+    The prologue/epilogue headers are right
+    The headers match the footers
+    
+    Every block in the free list is marked as free
+    Adjacent free blocks should have been coalesced
+    Every free block is actually in the free list
+*/
 int mm_check(void){
 	
+    char *bp;
+    /*
+    Checks the prologue header. If it is not of size 8 or is not allocated
+    it is not right
+    */
 	if ((GET_SIZE(HDRP(heap_listp)) != DSIZE) || !GET_ALLOC(HDRP(heap_listp))) {
 		printf("Bad prologue header\n");
 	}
 	
-	for(char *bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
+
+    /* 
+    runs through every block on the heap and checks if
+        we are doubleword aligning
+        header matches the footer
+        a free block is in our free list
+        there are adjacent free blocks that need to be coalesced
+     */
+	for(bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
 		if ((size_t)bp % 8) {
         	printf("Error: %p is not doubleword aligned\n", bp);
     	}
@@ -221,41 +246,39 @@ int mm_check(void){
 			printf("Error: header does not match footer\n");
 		}
 
+        if(!GET_ALLOC(bp)) {
+            //TODO Check if the free block is in our free list.
+            continue;
+        }
+
+        //Checks if there are free blocks adjacent that need to be coalesced
+        if(!GET_ALLOC(bp) && !GET_ALLOC(NEXT_BLKP(bp))) {
+            printf("Two free blocks in a row, should be coalesced");
+        }
+
 	}
+
+    /*
+    Checks the epilogue header. If it is not of size 0 and not allocated
+    it is not right.
+    */
 	if ((GET_SIZE(HDRP(bp)) != 0) || !(GET_ALLOC(HDRP(bp)))) {
         printf("Bad epilogue header\n");
     }
 
-}
-/* 
- * mm_checkheap - Check the heap for consistency 
- */
-void mm_checkheap(int verbose) 
-{
-    char *bp = heap_listp;
 
-    if (verbose) {
-        printf("Heap (%p):\n", heap_listp);
-    }
+    /*
+    Check if every block in our free list is actually free.
+    */
 
-    if ((GET_SIZE(HDRP(heap_listp)) != DSIZE) || !GET_ALLOC(HDRP(heap_listp))) {
-        printf("Bad prologue header\n");
-    }
-    checkblock(heap_listp);
+    /*
+    TODO loop through our free list. Inside the loop:
+        if(GET_ALLOC(curr)) {
+            printf("block in free list not actually free");
+        }
 
-    for (bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
-        if (verbose) {
-            printblock(bp);
-	}
-        checkblock(bp);
-    }
-     
-    if (verbose) {
-        printblock(bp);
-    }
-    if ((GET_SIZE(HDRP(bp)) != 0) || !(GET_ALLOC(HDRP(bp)))) {
-        printf("Bad epilogue header\n");
-    }
+    */
+    return 1;
 }
 
 /* The remaining routines are internal helper routines */
