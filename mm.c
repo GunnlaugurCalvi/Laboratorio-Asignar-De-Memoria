@@ -207,7 +207,26 @@ void *mm_realloc(void *ptr, size_t size)
     mm_free(ptr);
     return newp;
 }
+int mm_check(void){
+	
+	if ((GET_SIZE(HDRP(heap_listp)) != DSIZE) || !GET_ALLOC(HDRP(heap_listp))) {
+		printf("Bad prologue header\n");
+	}
+	
+	for(char *bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
+		if ((size_t)bp % 8) {
+        	printf("Error: %p is not doubleword aligned\n", bp);
+    	}
+		if (GET(HDRP(bp)) != GET(FTRP(bp))) {
+			printf("Error: header does not match footer\n");
+		}
 
+	}
+	if ((GET_SIZE(HDRP(bp)) != 0) || !(GET_ALLOC(HDRP(bp)))) {
+        printf("Bad epilogue header\n");
+    }
+
+}
 /* 
  * mm_checkheap - Check the heap for consistency 
  */
