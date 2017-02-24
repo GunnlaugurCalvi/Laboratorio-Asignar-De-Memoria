@@ -1,6 +1,5 @@
 /* 
- * mm-implicit.c -  Simple allocator based on implicit free lists, 
- *                  first fit placement, and boundary tag coalescing. 
+ * mm.c 
  *
  * Each block has header and footer of the form:
  * 
@@ -9,13 +8,29 @@
  *     | s  s  s  s  ... s  s  s  0  0  a/f
  *      ----------------------------------- 
  * 
- * where s are the meaningful size bits and a/f is set 
- * iff the block is allocated. The list has the following form:
+ * We will be using explicit free list with first fit implementation.
+ * Each free block has a header and a footer which contain size/allocation
+ * information about the block(see above). The block also has a next and prev
+ * pointer that points to the next and previous free blocks in the list.
+ * 
+ * A free block looks like this:
+ *  ------------------------------------------------------------------------------------
+ * | header - size/allocated | prev | next | free space ..... | footer - size/allocated |
+ *  ------------------------------------------------------------------------------------
+ *
+ * An allocated block looks like this:
+ *  ----------------------------------------------------------------------
+ * | header -size/allocated | payload + padding | footer - size/allocated |
+ *  ----------------------------------------------------------------------
+ *
+ *
+ *
+ * The heap looks like this:
  *
  * begin                                                          end
  * heap                                                           heap  
  *  -----------------------------------------------------------------   
- * |  pad   | hdr(8:a) | ftr(8:a) | zero or more usr blks | hdr(8:a) |
+ * |  pad   | hdr(8:a) | ftr(8:a) | zero or more usr blks | hdr(0:a) |
  *  -----------------------------------------------------------------
  *          |       prologue      |                       | epilogue |
  *          |         block       |                       | block    |
@@ -23,9 +38,6 @@
  * The allocated prologue and epilogue blocks are overhead that
  * eliminate edge conditions during coalescing.
  * 
- * Note: This assignment is a _baseline_ for the performance grade.
- * You will need to exceed the performance of this implicit first-fit placement
- * (which is about 49/100).
  */
 #include <stdio.h>
 #include <unistd.h>
