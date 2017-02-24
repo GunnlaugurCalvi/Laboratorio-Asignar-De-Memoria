@@ -97,7 +97,7 @@ team_t team = {
 #define GET(p)         (*(size_t *)(p))
 #define PUT(p, val)    (*(size_t *)(p) = (val))  
 
-/* (which is about 49/100).* Read the size and allocated fields from address p */
+/* (which is about 49/100).* Read the size and allocatfed fields from address p */
 #define GET_SIZE(p)    (GET(p) & ~0x7)
 #define GET_ALLOC(p)   (GET(p) & 0x1)
 
@@ -145,7 +145,7 @@ int mm_init(void)
     PUT(heap_listp+DSIZE, PACK(OVERHEAD, 1));  /* prologue footer */ 
     PUT(heap_listp+WSIZE+DSIZE, PACK(0, 1));   /* epilogue header */
 
-
+    heap_listp += DSIZE;
     /* make start of free list point to prologue footer */
     free_listp = heap_listp + DSIZE;
 
