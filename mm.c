@@ -108,10 +108,19 @@ team_t team = {
 /* Given block ptr bp, compute address of next and previous blocks */
 #define NEXT_BLKP(bp)  ((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE)))
 #define PREV_BLKP(bp)  ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
+
+/* Given block ptr bp, compute address of next and previous free blocks */
+/* TODO 
+    Implement defines that return next/prev free pointers
+*/
+
+
+
 /* $end mallocmacros */
 
 /* Global variables */
 static char *heap_listp;  /* pointer to first block */  
+static char *free_listp;  /* pointer to the beginning of our free list */
 
 /* function prototypes for internal helper routines */
 static void *extend_heap(size_t words);
@@ -135,7 +144,10 @@ int mm_init(void)
     PUT(heap_listp+WSIZE, PACK(OVERHEAD, 1));  /* prologue header */ 
     PUT(heap_listp+DSIZE, PACK(OVERHEAD, 1));  /* prologue footer */ 
     PUT(heap_listp+WSIZE+DSIZE, PACK(0, 1));   /* epilogue header */
-    heap_listp += DSIZE;
+
+
+    /* make start of free list point to prologue footer */
+    free_listp = heap_listp + DSIZE;
 
     /* Extend the empty heap with a free block of CHUNKSIZE bytes */
     if (extend_heap(CHUNKSIZE/WSIZE) == NULL) {
@@ -331,7 +343,11 @@ static void place(void *bp, size_t asize)
 {
     size_t csize = GET_SIZE(HDRP(bp));   
 
+    /* TODO
+        remove block from free list.
+    */
     if ((csize - asize) >= (DSIZE + OVERHEAD)) { 
+        //if we split we need to remove from free list and then add new block to free list
         PUT(HDRP(bp), PACK(asize, 1));
         PUT(FTRP(bp), PACK(asize, 1));
         bp = NEXT_BLKP(bp);
@@ -339,6 +355,7 @@ static void place(void *bp, size_t asize)
         PUT(FTRP(bp), PACK(csize-asize, 0));
     }
     else { 
+        //if we don't we just remove from the free list
         PUT(HDRP(bp), PACK(csize, 1));
         PUT(FTRP(bp), PACK(csize, 1));
     }
@@ -349,7 +366,12 @@ static void place(void *bp, size_t asize)
  * find_fit - Find a fit for a block with asize bytes 
  */
 static void *find_fit(size_t asize)
-{
+{   
+
+    /* TODO
+        change this so we traverse free list instead of all the heap
+    */
+
     /* first fit search */
     void *bp;
 
@@ -370,21 +392,32 @@ static void *coalesce(void *bp)
     size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
     size_t size = GET_SIZE(HDRP(bp));
 
+
+    /* TODO
+        remove blocks to be coalesced from free list
+        insert newly coalesced block into the free list
+
+    */
     if (prev_alloc && next_alloc) {            /* Case 1 */
         return bp;
     }
     else if (prev_alloc && !next_alloc) {      /* Case 2 */
+
+        //remove next block from free list?
         size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
         PUT(HDRP(bp), PACK(size, 0));
         PUT(FTRP(bp), PACK(size,0));
     }
     else if (!prev_alloc && next_alloc) {      /* Case 3 */
+        //remove prev block from free list
         size += GET_SIZE(HDRP(PREV_BLKP(bp)));
         PUT(FTRP(bp), PACK(size, 0));
         PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
         bp = PREV_BLKP(bp);
     }
     else {                                     /* Case 4 */
+
+        //remove next and prev blocks from free list
         size += GET_SIZE(HDRP(PREV_BLKP(bp))) + 
             GET_SIZE(FTRP(NEXT_BLKP(bp)));
         PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
@@ -392,6 +425,8 @@ static void *coalesce(void *bp)
         bp = PREV_BLKP(bp);
     }
 
+
+    //insert new bp into the free list
     return bp;
 }
 
