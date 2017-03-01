@@ -110,10 +110,8 @@ team_t team = {
 #define PREV_BLKP(bp)  ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
 
 /* Given block ptr bp, compute address of next and previous free blocks */
-/* TODO 
-    Implement defines that return next/prev free pointers
-*/
-
+#define NEXT_FREE(bp) (*(char**)(bp+WSIZE))
+#define PREV_FREE(bp) (*(char**)(bp))
 
 
 /* $end mallocmacros */
@@ -129,6 +127,8 @@ static void *find_fit(size_t asize);
 static void *coalesce(void *bp);
 static void printblock(void *bp); 
 static void checkblock(void *bp);
+static void insert_into_free_list(void *bp);
+static void remove_from_free_list(void *bp);
 
 /* 
  * mm_init - Initialize the memory manager 
@@ -145,7 +145,6 @@ int mm_init(void)
     PUT(heap_listp+DSIZE, PACK(OVERHEAD, 1));  /* prologue footer */ 
     PUT(heap_listp+WSIZE+DSIZE, PACK(0, 1));   /* epilogue header */
 
-    heap_listp += DSIZE;
     /* make start of free list point to prologue footer */
     free_listp = heap_listp + DSIZE;
 
@@ -430,7 +429,46 @@ static void *coalesce(void *bp)
     return bp;
 }
 
+static void insert_into_free_list(void *bp)
+{
+    /* when we insert a free block into the free list we insert
+     * it at the front of the list and
+            make the new front->next point to old front
+            make old front->prev point to new front
+            make the new front->prev point to NULL
+            make the start of the free list point to new front */
 
+    NEXT_FREE(bp) = free_listp;
+    PREV_FREE(free_listp) = bp;
+    PREV_FREE(bp) = NULL;
+    free_listp = bp;
+}
+
+static void remove_from_free_list(void *bp)
+{
+    /* when removing from the list we have two cases:
+     *  1) we are removing from the front of the list
+            in this case we make the start of the list skip
+            the block thats about to be removed and point to
+            the next block in the list
+     *  2) we're not removing from the front of the list
+            in this case we "cross the wires" so to speak and
+            skip over the block that's about to be deleted.
+            If we have a prev, curr and next pointer we make
+            prev point to next and next point to prev so we skip
+            over our curr pointer.
+    */
+    
+    //case 1
+    if(!PREV_FREE(bp)) {
+        free_listp = NEXT_FREE(bp);
+    }
+    //case 2
+    else {
+        NEXT_FREE(PREV_FREE(bp)) = NEXT_FREE(bp);
+    }
+    PREV_FREE(NEXT_FREE(bp)) = PREV_FREE(bp);
+}
 static void printblock(void *bp) 
 {
     size_t hsize, halloc, fsize, falloc;
