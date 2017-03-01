@@ -412,7 +412,6 @@ static void *coalesce(void *bp)
         return bp;
     }
     else if (prev_alloc && !next_alloc) {      /* Case 2 */
-        printf("test");
         //remove next block from free list?
         size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
         PUT(HDRP(bp), PACK(size, 0));
