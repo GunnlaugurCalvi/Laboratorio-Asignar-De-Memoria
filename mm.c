@@ -152,7 +152,8 @@ int mm_init(void)
     if (extend_heap(CHUNKSIZE/WSIZE) == NULL) {
         return -1;
     }
-    return 0;
+    
+	return 0;
 }
 /* $end mminit */
 
@@ -414,7 +415,8 @@ static void *coalesce(void *bp)
     else if (prev_alloc && !next_alloc) {      /* Case 2 */
         //remove next block from free list?
         size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
-        PUT(HDRP(bp), PACK(size, 0));
+		remove_from_free_list(NEXT_BLKP(bp));
+		PUT(HDRP(bp), PACK(size, 0));
         PUT(FTRP(bp), PACK(size,0));
     }
     else if (!prev_alloc && next_alloc) {      /* Case 3 */
@@ -436,7 +438,9 @@ static void *coalesce(void *bp)
 
 
     //insert new bp into the free list
-    return bp;
+    //insert_into_free_list(bp);
+	mm_check();
+	return bp;
 }
 
 static void insert_into_free_list(void *bp)
