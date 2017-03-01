@@ -270,12 +270,19 @@ int mm_check(void){
 		if (GET(HDRP(bp)) != GET(FTRP(bp))) {
 			printf("Error: header does not match footer\n");
 		}
-
-        if(!GET_ALLOC(bp)) {
-            //TODO Check if the free block is in our free list.
-            continue;
-        }
-
+		if(!GET_ALLOC(bp)){
+		    char* temp_ptr;
+		    int found = 0;
+		    for(temp_ptr = free_listp; GET_ALLOC(HDRP(temp_ptr)) == 0; temp_ptr = NEXT_FREE(temp_ptr)){
+			if(temp_ptr == bp){
+			   found = 1;
+			   break;
+			}
+		    }
+		    if(!found){
+			printf("Block %p is not in the free list", bp);
+		    }
+		}
         //Checks if there are free blocks adjacent that need to be coalesced
         if(!GET_ALLOC(bp) && !GET_ALLOC(NEXT_BLKP(bp))) {
             printf("Two free blocks in a row, should be coalesced");
@@ -288,7 +295,7 @@ int mm_check(void){
     it is not right.
     */
 	if ((GET_SIZE(HDRP(bp)) != 0) || !(GET_ALLOC(HDRP(bp)))) {
-        printf("Bad epilogue header\n");
+            printf("Bad epilogue header\n");
     }
 
 
@@ -298,11 +305,12 @@ int mm_check(void){
 
     /*
     TODO loop through our free list. Inside the loop:
-        if(GET_ALLOC(curr)) {
-            printf("block in free list not actually free");
-        }
+    */        
+	for(bp = free_listp; GET_ALLOC(HDRP(bp)) == 0; bp = NEXT_FREE(bp)){
+	   if(GET_ALLOC(bp)){
+	       print("Block %p in free list is actually not free", bp);
+	   }
 
-    */
     return 1;
 }
 
