@@ -308,8 +308,9 @@ int mm_check(void){
     */        
 	for(bp = free_listp; GET_ALLOC(HDRP(bp)) == 0; bp = NEXT_FREE(bp)){
 	   if(GET_ALLOC(bp)){
-	       print("Block %p in free list is actually not free", bp);
+	       printf("Block %p in free list is actually not free", bp);
 	   }
+	}
 
     return 1;
 }
