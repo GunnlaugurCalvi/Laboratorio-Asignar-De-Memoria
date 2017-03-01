@@ -147,7 +147,7 @@ int mm_init(void)
 
     /* make start of free list point to prologue footer */
     free_listp = heap_listp + DSIZE;
-
+    heap_listp = heap_listp + DSIZE;
     /* Extend the empty heap with a free block of CHUNKSIZE bytes */
     if (extend_heap(CHUNKSIZE/WSIZE) == NULL) {
         return -1;
@@ -162,6 +162,7 @@ int mm_init(void)
 /* $begin mmmalloc */
 void *mm_malloc(size_t size) 
 {
+    
     size_t asize;      /* adjusted block size */
     size_t extendsize; /* amount to extend heap if no fit */
     char *bp;      
@@ -191,7 +192,8 @@ void *mm_malloc(size_t size)
         return NULL;
     }
     place(bp, asize);
-    return bp;
+    return bp; 
+    
 } 
 /* $end mmmalloc */
 
@@ -325,7 +327,7 @@ static void *extend_heap(size_t words)
     PUT(HDRP(bp), PACK(size, 0));         /* free block header */
     PUT(FTRP(bp), PACK(size, 0));         /* free block footer */
     PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1)); /* new epilogue header */
-
+    
     /* Coalesce if the previous block was free */
     return coalesce(bp);
 }
@@ -401,7 +403,7 @@ static void *coalesce(void *bp)
         return bp;
     }
     else if (prev_alloc && !next_alloc) {      /* Case 2 */
-
+        printf("test");
         //remove next block from free list?
         size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
         PUT(HDRP(bp), PACK(size, 0));
