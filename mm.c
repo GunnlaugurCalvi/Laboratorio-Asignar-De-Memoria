@@ -9,6 +9,8 @@
  *      ----------------------------------- 
  * 
  * We will be using explicit free list with first fit implementation.
+ * We started out with mm-firstfit.c which is an implicit list implementation
+ * and worked from there.
  * Each free block has a header and a footer which contain size/allocation
  * information about the block(see above). The block also has a next and prev
  * pointer that points to the next and previous free blocks in the list.
@@ -89,45 +91,57 @@ team_t team = {
 #define OVERHEAD    8        /* overhead of header and footer (bytes) */
 
 
-/* #define MAX(x, y) ((x) > (y) ? (x) : (y)) */
-inline MAX(int x, int y){
+inline size_t MAX(int x, int y){
 	return ((x) > (y) ? (x) : (y));
 }
 
 /* Pack a size and allocated bit into a word */
-/* #define PACK(size, alloc)  ((size) | (alloc)) */
-inline PACK(size_t size, size_t alloc){
+inline size_t PACK(size_t size, size_t alloc){
 	return ((size) | (alloc));
 }
 
 /* Read and write a word at address p. */
-/* #define GET(p)       (*(size_t*)(p)) */
-/* #define PUT(p, val)  (*(size_t *)(p) = (val)) */
-inline GET(char *p){
+inline size_t GET(char *p){
 	return (*(size_t*)(p));
 }
-inline PUT(char *p, size_t val){
+inline size_t PUT(char *p, size_t val){
 	return (*(size_t *)(p) = (val));
 }
 
-/* Read the size and allocated fields from address p */
-#define GET_SIZE(p)   (GET(p) & ~0x7) 
-#define GET_ALLOC(p)  (GET(p) & 0x1) 
-/* Given block ptr bp, compute address of its header and footer */
-#define HDRP(bp)  ((char *)(bp) - WSIZE) 
-#define FTRP(bp)  ((char *)(bp) + GET_SIZE(HDRP(bp)) - DSIZE) 
 
+/* Read the size and allocated fields from address p */
+inline size_t GET_SIZE(char *p) {
+    return (GET(p) & ~0x7);
+}
+inline size_t GET_ALLOC(char *p) {
+    return (GET(p) & 0x1);
+}
+
+
+/* Given block ptr bp, compute address of its header and footer */
+inline char* HDRP(char* bp) {
+    return ((char*)(bp) - WSIZE);
+}
+inline char* FTRP(char* bp) {
+    return ((char *)(bp) + GET_SIZE(HDRP(bp)) - DSIZE);
+}
 
 
 /*Given block ptr bp, compute address of next and previous blocks */
-#define NEXT_BLKP(bp)  ((char *)(bp) + GET_SIZE(((char*)(bp) - WSIZE))) 
-#define PREV_BLKP(bp)  ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE))) 
+inline char* NEXT_BLKP(char* bp) {
+    return ((char*)(bp) + GET_SIZE(((char*)(bp) - WSIZE)));
+}
+inline char* PREV_BLKP(char* bp) {
+    return ((char*)(bp) - GET_SIZE(((char*)(bp) - DSIZE)));
+}
+
 
 
 /* Given free ptr bp, compute address of next and previous blocks
  * in the free list */
 #define NEXT_FREE(bp)  (*(char **)(bp + WSIZE)) 
 #define PREV_FREE(bp)  (*(char **)(bp)) 
+
 
 /* Global declarations */
 static char *heap_listp = 0; /* pointer to the first block */
@@ -172,6 +186,11 @@ int mm_init(void) {
 
 /*
  * mm_malloc - Allocate a block with at least size bytes of payload
+ *             
+ * We start by adjusting and aligning our size to include overhead and alignment
+ * requirements. Then we try to find a fit for our block, if we do we place our block 
+ * where it fits. 
+ * If no fit is found we extend the heap and then place our block.
  */
 /* $begin mmalloc */
 void *mm_malloc(size_t size) 
@@ -204,6 +223,10 @@ void *mm_malloc(size_t size)
 
 /*
  * mm_free - Free a block
+ * Same implementation as with implicit list.
+ * We get the size, put it into the header and 
+ * footer and coalesce where the block is inserted
+ * into the free list.
  */
 /* $begin mmfree */
 void mm_free(void *bp){
@@ -215,7 +238,11 @@ void mm_free(void *bp){
 }
 
 /*
- * mm_realloc - naive implementation of mm_realloc 
+ * mm_realloc - Reallocates pointer ptr with size bytes.
+ * We start with adjusting the size to meet our requirements.
+ * We have some special cases to increase performance but if
+ * none of that works we just simply malloc a new block
+ * and free the old block. 
  */
 void *mm_realloc(void *ptr, size_t size){
     void *newp;
@@ -232,7 +259,10 @@ void *mm_realloc(void *ptr, size_t size){
         mm_free(ptr);
         return 0;
     }
-    copySize = GET_SIZE(HDRP(ptr));
+    
+    copySize = GET_SIZE(HDRP(ptr)); //size of the block pointed to by ptr */
+    
+    /* if realloc is requesting less size we just return the pointer */
     if (asize <= copySize) {
         return ptr;
     }
@@ -243,8 +273,6 @@ void *mm_realloc(void *ptr, size_t size){
         next block is free but not big enough but is at the end
         our ptr block is the last block
     */
-
-   
     nextSize = GET_SIZE(HDRP(NEXT_BLKP(ptr))); //size of the next block
     
     /*Case 1 -  check if next block is free and big enough */
@@ -274,13 +302,14 @@ void *mm_realloc(void *ptr, size_t size){
         PUT(FTRP(ptr), PACK(nextSize+copySize,1));    
         return ptr;
     }
+
+
     /* if nothing above works, we just malloc a new block and return it */
     if((newp = mm_malloc(size)) == NULL) {
         printf("ERROR: mm_malloc failed in mm_realloc\n");
         exit(1);
     }
 
-    copySize = GET_SIZE(HDRP(ptr));
     if(size < copySize) {
         copySize = size;
     }
@@ -397,10 +426,12 @@ static void *extend_heap(size_t words) {
 
 /*
  * find_fit - Find a fit for a block with asize bytes
+ * 
+ * We use a first fit search where we traverse our entire free list
+ * and find the first block that is big enough to hold a payload of asize.
+ * If no such fit is found we return NULL
  */
 static void *find_fit(size_t asize){
-    /* First fit search - traverse our free list and
-    * choose the first block that is big enough */
 
     void *bp;
     for (bp = free_listp; GET_ALLOC(HDRP(bp)) == 0; bp = NEXT_FREE(bp) ){
@@ -415,6 +446,17 @@ static void *find_fit(size_t asize){
 /*
  * place - Place block of asize bytes at start of free block bp
  *          and split if remainder would be at least minimum block size
+ *
+ * Pretty much the same implementation as with implicit list but we remove
+ * from our free list and coalesce.
+ *
+ * If our free block is large enough to hold a block of asize sys and our minimum
+ * block size, we split the block into one allocated and one free block.
+ * We remove the old free block and coalesce where the new free block is 
+ * inserted into the free list
+ *
+ * If our free block is not large enough, we just allocate it and remove it frmo
+ * the free list
  */
 
 /* $begin mmplace */
@@ -441,14 +483,17 @@ static void place(void *bp, size_t asize){
 
 /*
  * coalesce - boundary tag coalescing. Return ptr to coalesced block
+ *      Given a free block bp we check if there are adjacent free blocks
+ *      if there are we "merge" them into a larger free block
+ *      and insert into the free list
  */
 static void *coalesce(void *bp){
 
     /* checks if next block is allocated*/
-    size_t NEXT_ALLOC = GET_ALLOC(  HDRP(NEXT_BLKP(bp))  );
+    size_t next_alloc = GET_ALLOC(  HDRP(NEXT_BLKP(bp))  );
 
     /* checks if previous block is allocated or if we are at the front of the heap */
-    size_t PREV_ALLOC = GET_ALLOC(  FTRP(PREV_BLKP(bp))) || PREV_BLKP(bp) == bp ;
+    size_t prev_alloc = GET_ALLOC(  FTRP(PREV_BLKP(bp))) || PREV_BLKP(bp) == bp ;
     size_t size = GET_SIZE(HDRP(bp));
   
     /* Case 1 - only the next block is free
@@ -456,7 +501,7 @@ static void *coalesce(void *bp){
     *            and make a new block with the combined size of
     *            current block and next block
     */
-    if (PREV_ALLOC && !NEXT_ALLOC) {                  
+    if (prev_alloc && !next_alloc) {                  
         size += GET_SIZE( HDRP(NEXT_BLKP(bp))  );
         remove_from_free_list(NEXT_BLKP(bp));
         PUT(HDRP(bp), PACK(size, 0));
@@ -467,7 +512,7 @@ static void *coalesce(void *bp){
     *        and make a new block with combined size of
     *        current block and previous block
     */  
-    else if (!PREV_ALLOC && NEXT_ALLOC) {               
+    else if (!prev_alloc && next_alloc) {               
         size += GET_SIZE( HDRP(PREV_BLKP(bp))  );
         bp = PREV_BLKP(bp);
         remove_from_free_list(bp);
@@ -479,7 +524,7 @@ static void *coalesce(void *bp){
     *        from the free list and make a new block with a combined
     *        size of previous, current and next blocks
     */ 
-    else if (!PREV_ALLOC && !NEXT_ALLOC) {                
+    else if (!prev_alloc && !next_alloc) {                
         size += GET_SIZE( HDRP(PREV_BLKP(bp))  ) + GET_SIZE( HDRP(NEXT_BLKP(bp))  );
         remove_from_free_list(PREV_BLKP(bp));
         remove_from_free_list(NEXT_BLKP(bp));
@@ -510,6 +555,8 @@ static void insert_into_free_list(void *bp)
     PREV_FREE(bp) = NULL;
     free_listp = bp;
 }
+
+
 /*remove block from the free listt*/
 static void remove_from_free_list(void *bp)
 {
