@@ -218,7 +218,7 @@ void *mm_realloc(void *ptr, size_t size){
     /* if size is 0 it is the same as calling mm_free(ptr) */
     else if(size == 0) {
         mm_free(ptr);
-        return;
+        return 0;
     }
     copySize = GET_SIZE(HDRP(ptr));
     if (asize <= copySize) {
@@ -291,12 +291,14 @@ void *mm_realloc(void *ptr, size_t size){
  */
 int mm_check(void) {
     char *bp;
+    int is_good = 1;
     /*
      *Checks the prologue header. If it is not of size 8 or is not allocated
      *it is not right
     */
     if ((GET_SIZE(HDRP(heap_listp)) != DSIZE) || !GET_ALLOC(HDRP(heap_listp))) {
         printf("Bad prologue header\n");
+        is_good = 0;
     }
 
     /*
@@ -310,6 +312,7 @@ int mm_check(void) {
     for(bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
         if((size_t)bp % 8) {
             printf("Error: %p is not doubleword aligned\n", bp);
+            is_good = 0;
         }
         /* if we find a free block, we traverse the free list to see if it is in the list */
         if(!GET_ALLOC(HDRP(bp))){
@@ -322,6 +325,7 @@ int mm_check(void) {
             }
             if(!found) {
                 printf("Block %p is not in the free list", bp);
+                is_good = 0;
             }
         }
     }
@@ -331,7 +335,8 @@ int mm_check(void) {
      *it is not right
      */
      if ((GET_SIZE(HDRP(bp)) != 0) || !(GET_ALLOC(HDRP(bp)))) {
-             printf("Bad epilogue header\n");
+         printf("Bad epilogue header\n");
+         is_good = 0;
      }
 
 
@@ -341,12 +346,13 @@ int mm_check(void) {
       */
 
      for(bp = free_listp; GET_ALLOC(HDRP(bp)) == 0; bp = NEXT_FREE(bp)){
-         if(GET_ALLOC(bp)){
-             printf("Block %p in free list is actually not free", bp);    
+        if(GET_ALLOC(bp)){
+            printf("Block %p in free list is actually not free", bp);    
+            is_good = 0;
          }
      }
 
-     return 1;
+     return is_good;
 
 }
 
