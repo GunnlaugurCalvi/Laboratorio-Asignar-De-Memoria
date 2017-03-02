@@ -83,8 +83,8 @@ team_t team = {
 
 /* $begin mallocmacros */
 /* Basic constants and macros */
-#define WSIZE       4       /* word size (bytes) */  
-#define DSIZE       8       /* doubleword size (bytes) */
+#define WSIZE      4     /* word size (bytes) */  
+#define DSIZE      8       /* doubleword size (bytes) */
 #define CHUNKSIZE  (1<<12)  /* initial heap size (bytes) */
 #define OVERHEAD    8       /* overhead of header and footer (bytes) */
 
@@ -142,15 +142,14 @@ int mm_init(void)
         return -1;
     }
     PUT(heap_listp, 0);                        /* alignment padding */
-    PUT(heap_listp+WSIZE, PACK(OVERHEAD, 1));  /* prologue header */ 
-    PUT(heap_listp+DSIZE, PACK(OVERHEAD, 1));  /* prologue footer */ 
-    PUT(heap_listp+WSIZE+DSIZE, PACK(0, 1));   /* epilogue header */
+    PUT(heap_listp + WSIZE, PACK(DSIZE, 1));
+    PUT(heap_listp + DSIZE, PACK(DSIZE,1));
+    PUT(heap_listp + DSIZE+WSIZE, PACK(0,1));
 
-    /* make start of free list point to prologue footer */
     free_listp = heap_listp + DSIZE;
     heap_listp = heap_listp + DSIZE;
     /* Extend the empty heap with a free block of CHUNKSIZE bytes */
-    if (extend_heap(4) == NULL) {
+    if (extend_heap(CHUNKSIZE/WSIZE) == NULL) {
         return -1;
     }
 	return 0;
@@ -341,6 +340,12 @@ static void *extend_heap(size_t words)
     /* Coalesce if the previous block was free */
 	printf("in extend \n");
     mm_check();
+    printblock(bp);
+    fflush(stdout);
+    printblock(NEXT_BLKP(bp));
+    fflush(stdout);
+    printblock(PREV_BLKP(bp));
+    fflush(stdout);   
 	return coalesce(bp);
 }
 /* $end mmextendheap */
@@ -359,7 +364,7 @@ static void place(void *bp, size_t asize)
     /* TODO
         remove block from free list.
     */
-    if ((csize - asize) >= (DSIZE + OVERHEAD)) { 
+    if ((csize - asize) >= (DSIZE+OVERHEAD)) {
         //if we split we need to remove from free list and then add new block to free list
         PUT(HDRP(bp), PACK(asize, 1));
         PUT(FTRP(bp), PACK(asize, 1));
@@ -375,8 +380,6 @@ static void place(void *bp, size_t asize)
         PUT(FTRP(bp), PACK(csize, 1));
 		remove_from_free_list(bp);
     }
-    printf("in place");
-	mm_check();
 }
 /* $end mmplace */
 
@@ -406,10 +409,11 @@ static void *find_fit(size_t asize)
  */
 static void *coalesce(void *bp) 
 {
-    size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))) ;
+    size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))) || PREV_BLKP(bp) == bp;
     size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
     size_t size = GET_SIZE(HDRP(bp));
-
+    printf("size: %d, prev: %d, next: %d", size, prev_alloc, next_alloc);
+    fflush(stdout);   
 
     /* TODO
         remove blocks to be coalesced from free list
@@ -441,7 +445,6 @@ static void *coalesce(void *bp)
         PUT(HDRP(bp), PACK(size, 0));
         PUT(FTRP(bp), PACK(size, 0));
 	}
-
     //insert new bp into the free list
     insert_into_free_list(bp);
 	return bp;
