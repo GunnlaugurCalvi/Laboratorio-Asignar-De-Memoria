@@ -243,21 +243,25 @@ void *mm_realloc(void *ptr, size_t size){
         return ptr;
     }
     /*Case 2 - check if next block is free and the last block */
-    else if(!GET_ALLOC(HDRP(NEXT_BLKP(ptr))) && nextSize  == 0) {
+    else if(!GET_ALLOC(HDRP(NEXT_BLKP(ptr))) && GET_SIZE(HDRP(NEXT_BLKP(NEXT_BLKP(ptr))))  == 0) {
         extendSize = MAX(asize - (copySize + nextSize), CHUNKSIZE);
         newp = extend_heap(extendSize/WSIZE);
-        coalesce(newp);
         remove_from_free_list(NEXT_BLKP(ptr));
         nextSize = GET_SIZE(HDRP(NEXT_BLKP(ptr)));
         PUT(HDRP(ptr), PACK(nextSize+copySize,1));
         PUT(FTRP(ptr), PACK(nextSize+copySize,1));
         return ptr;
     }
-
-
     /* Case 3 - check if current block is at the end */
-
-
+    else if(nextSize == 0) {
+        extendSize = MAX(asize - copySize, CHUNKSIZE);
+        newp = extend_heap(extendSize/WSIZE);
+        remove_from_free_list(NEXT_BLKP(ptr));
+        nextSize = GET_SIZE(HDRP(NEXT_BLKP(ptr)));
+        PUT(HDRP(ptr), PACK(nextSize+copySize,1));
+        PUT(FTRP(ptr), PACK(nextSize+copySize,1));    
+        return ptr;
+    }
     /* if nothing above works, we just malloc a new block and return it */
     if((newp = mm_malloc(size)) == NULL) {
         printf("ERROR: mm_malloc failed in mm_realloc\n");
