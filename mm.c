@@ -176,8 +176,11 @@ int mm_init(void) {
     /* initialize our free list pointer */
     free_listp = heap_listp + DSIZE; 
 
-    /* Extend the empty heap with a free block of CHUNKSIZE bytes */
-    if (extend_heap(4) == NULL){ 
+    /* mm-firstfit extended the heap with CHUNKSIZE bytes but we found we got better score for util
+     * when we extended it by a smaller size at the beginning.
+     * We tested a lot of different sizes and in the end found that 32 words were large enough
+     * while not lowering our util score */
+    if (extend_heap(DSIZE*WSIZE) == NULL){ 
         return -1;
     }
     return 0;
