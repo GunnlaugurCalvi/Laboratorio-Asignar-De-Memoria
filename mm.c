@@ -298,7 +298,6 @@ int mm_check(void) {
     /*
      *runs through every block on the heap and checks if
      *   we are doubleword aligning
-     *   header matches the footer
      *   a free block is in our free list
      *   there are adjacent free blocks that need to be coalesced
      *   
@@ -308,10 +307,7 @@ int mm_check(void) {
         if((size_t)bp % 8) {
             printf("Error: %p is not doubleword aligned\n", bp);
         }
-        if (GET(HDRP(bp)) != GET(FTRP(bp))) {
-            printf("Error: header does not match footer\n");
-            printblock(bp);
-        }
+        /* if we find a free block, we traverse the free list to see if it is in the list */
         if(!GET_ALLOC(HDRP(bp))){
             char* temp_ptr;
             int found = 0;
@@ -327,9 +323,9 @@ int mm_check(void) {
     }
 
     /*
-     *     Checks the epilogue header. If it is not of size 0 and not allocated
-     *         it is not right.
-     *             */
+     *Checks the epilogue header. If it is not of size 0 and not allocated
+     *it is not right
+     */
      if ((GET_SIZE(HDRP(bp)) != 0) || !(GET_ALLOC(HDRP(bp)))) {
              printf("Bad epilogue header\n");
      }
@@ -340,12 +336,10 @@ int mm_check(void) {
       *
       */
 
-     /*
-      *     TODO loop through our free list. Inside the loop:
-      */
      for(bp = free_listp; GET_ALLOC(HDRP(bp)) == 0; bp = NEXT_FREE(bp)){
          if(GET_ALLOC(bp)){
-             printf("Block %p in free list is actually not free", bp);                                               }
+             printf("Block %p in free list is actually not free", bp);    
+         }
      }
 
      return 1;
