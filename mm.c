@@ -201,23 +201,23 @@ void *mm_malloc(size_t size)
 
     /* Ignore spurious requests. */
     if (size == 0)
-    return (NULL);
+        return NULL;
 
     /* Adjust block size to include overhead and alignment reqs. */
     asize = adjust_and_align(size);
 
     /* Search the free list for a fit. */
     if ((bp = find_fit(asize)) != NULL) {
-    place(bp, asize);
-    return (bp);
+        place(bp, asize);
+        return (bp);
     }
 
     /* No fit found.  Get more memory and place the block. */
     extendsize = MAX(asize, CHUNKSIZE);
     if ((bp = extend_heap(extendsize / WSIZE)) == NULL)  
-    return (NULL);
-    place(bp, asize);
-    return (bp);
+        return (NULL);
+        place(bp, asize);
+    return bp;
 } 
 /* $end mmalloc */
 
@@ -495,17 +495,22 @@ static void *coalesce(void *bp){
     /* checks if previous block is allocated or if we are at the front of the heap */
     size_t prev_alloc = GET_ALLOC(  FTRP(PREV_BLKP(bp))) || PREV_BLKP(bp) == bp ;
     size_t size = GET_SIZE(HDRP(bp));
-  
+    if(prev_alloc && next_alloc) {
+        insert_into_free_list(bp);
+        return bp;
+    }
     /* Case 1 - only the next block is free
     *            here we remove the next block from the free list
     *            and make a new block with the combined size of
     *            current block and next block
     */
-    if (prev_alloc && !next_alloc) {                  
+    else if (prev_alloc && !next_alloc) {                  
         size += GET_SIZE( HDRP(NEXT_BLKP(bp))  );
         remove_from_free_list(NEXT_BLKP(bp));
         PUT(HDRP(bp), PACK(size, 0));
         PUT(FTRP(bp), PACK(size, 0));
+        insert_into_free_list(bp);
+        return bp;
     }
     /* Case 2 - only the prevous block is free
     *        here we remove from the free list
@@ -518,24 +523,25 @@ static void *coalesce(void *bp){
         remove_from_free_list(bp);
         PUT(HDRP(bp), PACK(size, 0));
         PUT(FTRP(bp), PACK(size, 0));
+        insert_into_free_list(bp);
+        return bp;
     }
     /* Case 3 - both next and previous blocks are free
     *        here we remove both next and previous blocks
     *        from the free list and make a new block with a combined
     *        size of previous, current and next blocks
     */ 
-    else if (!prev_alloc && !next_alloc) {                
+    else  {                
         size += GET_SIZE( HDRP(PREV_BLKP(bp))  ) + GET_SIZE( HDRP(NEXT_BLKP(bp))  );
         remove_from_free_list(PREV_BLKP(bp));
         remove_from_free_list(NEXT_BLKP(bp));
         bp = PREV_BLKP(bp);
         PUT(HDRP(bp), PACK(size, 0));
         PUT(FTRP(bp), PACK(size, 0));
+        insert_into_free_list(bp);
+        return bp;
     }
 
-    /*insert the new block into the free list */
-    insert_into_free_list(bp);
-    return bp;
 }
 
 /*insert a block into the free list*/
