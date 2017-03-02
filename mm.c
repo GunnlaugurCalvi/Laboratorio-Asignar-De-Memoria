@@ -89,33 +89,72 @@ team_t team = {
 #define OVERHEAD    8        /* overhead of header and footer (bytes) */
 
 
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
+/* #define MAX(x, y) ((x) > (y) ? (x) : (y)) */
+inline MAX(int x, int y){
+	return ((x) > (y) ? (x) : (y));
+}
 
 /* Pack a size and allocated bit into a word */
-#define PACK(size, alloc)  ((size) | (alloc))
+/* #define PACK(size, alloc)  ((size) | (alloc)) */
+inline PACK(size_t size, size_t alloc){
+	return ((size) | (alloc));
+}
 
 /* Read and write a word at address p. */
-#define GET(p)       (*(size_t*)(p))
-#define PUT(p, val)  (*(size_t *)(p) = (val))
+/* #define GET(p)       (*(size_t*)(p)) */
+/* #define PUT(p, val)  (*(size_t *)(p) = (val)) */
+inline GET(char *p){
+	return (*(size_t*)(p));
+}
+inline PUT(char *p, size_t val){
+	return (*(size_t *)(p) = (val));
+}
 
 /* Read the size and allocated fields from address p */
-#define GET_SIZE(p)   (GET(p) & ~0x7)
-#define GET_ALLOC(p)  (GET(p) & 0x1)
+/* #define GET_SIZE(p)   (GET(p) & ~0x7) */
+/* #define GET_ALLOC(p)  (GET(p) & 0x1) */
 
+inline GET_ALLOC(char *p){
+	return (GET(p) & 0x1);
+}
+
+inline GET_SIZE(char *p){
+	return (GET(p) & ~0x7);
+}
 
 /* Given block ptr bp, compute address of its header and footer */
-#define HDRP(bp)  ((char *)(bp) - WSIZE)
-#define FTRP(bp)  ((char *)(bp) + GET_SIZE(HDRP(bp)) - DSIZE)
+/*#define HDRP(bp)  ((char *)(bp) - WSIZE) */
+/*#define FTRP(bp)  ((char *)(bp) + GET_SIZE(HDRP(bp)) - DSIZE) */
+inline HDRP(char *bp){
+	return ((char *)(bp) - WSIZE);
+}
 
+inline FTRP(char *bp){
+	return ((char *)(bp) + GET_SIZE(HDRP(bp)) - DSIZE);
+}
 /* Given block ptr bp, compute address of next and previous blocks */
-#define NEXT_BLKP(bp)  ((char *)(bp) + GET_SIZE(((char*)(bp) - WSIZE)))
-#define PREV_BLKP(bp)  ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
+/* #define NEXT_BLKP(bp)  ((char *)(bp) + GET_SIZE(((char*)(bp) - WSIZE))) */
+/* #define PREV_BLKP(bp)  ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE))) */
 
+inline NEXT_BLKP(char *bp){
+	return ((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE)));
+}
+
+inline PREV_BLKP(char *bp){
+	return ((char *)(bp) - GET_SIZE(((char *)(bp) - WSIZE)));
+}
 /* Given free ptr bp, compute address of next and previous blocks
  * in the free list */
-#define NEXT_FREE(bp)  (*(char **)(bp + WSIZE))
-#define PREV_FREE(bp)  (*(char **)(bp))
+/*#define NEXT_FREE(bp)  (*(char **)(bp + WSIZE)) */
+/*#define PREV_FREE(bp)  (*(char **)(bp)) */
 
+inline NEXT_FREE(char *bp){
+	return (*(char **)(bp + WSIZE));
+}
+
+inline PREV_FREE(char *bp){
+	return (*(char **)(bp));
+}
 
 /* Global declarations */
 static char *heap_listp = 0; /* pointer to the first block */
