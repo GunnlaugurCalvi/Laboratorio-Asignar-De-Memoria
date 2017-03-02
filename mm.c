@@ -152,7 +152,6 @@ int mm_init(void)
     if (extend_heap(CHUNKSIZE/WSIZE) == NULL) {
         return -1;
     }
-    
 	return 0;
 }
 /* $end mminit */
@@ -193,7 +192,7 @@ void *mm_malloc(size_t size)
         return NULL;
     }
     place(bp, asize);
-    return bp; 
+	return bp; 
     
 } 
 /* $end mmmalloc */
@@ -275,10 +274,11 @@ int mm_check(void){
 		    char* temp_ptr;
 		    int found = 0;
 		    for(temp_ptr = free_listp; GET_ALLOC(HDRP(temp_ptr)) == 0; temp_ptr = NEXT_FREE(temp_ptr)){
-			if(temp_ptr == bp){
-			   found = 1;
-			   break;
-			}
+				printf("prumpir");
+				if(temp_ptr == bp){
+					found = 1;
+					break;
+				}
 		    }
 		    if(!found){
 			printf("Block %p is not in the free list", bp);
@@ -328,8 +328,8 @@ static void *extend_heap(size_t words)
     size_t size;
         
     /* Allocate an even number of words to maintain alignment */
-    size = (words % 2) ? (words+1) * WSIZE : words * WSIZE;
-    if ((bp = mem_sbrk(size)) == (void *)-1) {
+    size = (words % 2) ? (words+1) * WSIZE : words * WSIZE; 
+	if ((bp = mem_sbrk(size)) == (void *)-1) {
         return NULL;
     }
 
@@ -339,7 +339,8 @@ static void *extend_heap(size_t words)
     PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1)); /* new epilogue header */
     
     /* Coalesce if the previous block was free */
-    return coalesce(bp);
+	mm_check();
+	return coalesce(bp);
 }
 /* $end mmextendheap */
 
@@ -361,15 +362,19 @@ static void place(void *bp, size_t asize)
         //if we split we need to remove from free list and then add new block to free list
         PUT(HDRP(bp), PACK(asize, 1));
         PUT(FTRP(bp), PACK(asize, 1));
+		remove_from_free_list(bp);
         bp = NEXT_BLKP(bp);
         PUT(HDRP(bp), PACK(csize-asize, 0));
         PUT(FTRP(bp), PACK(csize-asize, 0));
+		coalesce(bp);
     }
     else { 
         //if we don't we just remove from the free list
         PUT(HDRP(bp), PACK(csize, 1));
         PUT(FTRP(bp), PACK(csize, 1));
+		remove_from_free_list(bp);
     }
+	mm_check();
 }
 /* $end mmplace */
 
@@ -391,7 +396,8 @@ static void *find_fit(size_t asize)
             return bp;
         }
     }
-    return NULL; /* no fit */
+	printf("no fit mane");
+	return NULL; /* no fit */
 }
 
 /*
@@ -422,7 +428,7 @@ static void *coalesce(void *bp)
     else if (!prev_alloc && next_alloc) {      /* Case 3 */
         //remove prev block from free list
         size += GET_SIZE(HDRP(PREV_BLKP(bp)));
-        PUT(FTRP(bp), PACK(size, 0));
+	    PUT(FTRP(bp), PACK(size, 0));
         PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
         bp = PREV_BLKP(bp);
     }
@@ -430,15 +436,15 @@ static void *coalesce(void *bp)
 
         //remove next and prev blocks from free list
         size += GET_SIZE(HDRP(PREV_BLKP(bp))) + 
-            GET_SIZE(FTRP(NEXT_BLKP(bp)));
-        PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
+		GET_SIZE(FTRP(NEXT_BLKP(bp)));
+	    PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
         PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 0));
-        bp = PREV_BLKP(bp);
-    }
+		bp = PREV_BLKP(bp);
+	}
 
 
     //insert new bp into the free list
-    //insert_into_free_list(bp);
+    insert_into_free_list(bp);
 	mm_check();
 	return bp;
 }
