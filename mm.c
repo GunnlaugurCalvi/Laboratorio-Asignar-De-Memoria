@@ -207,7 +207,9 @@ void mm_free(void *bp){
  */
 void *mm_realloc(void *ptr, size_t size){
     void *newp;
-    size_t copySize;
+    size_t copySize, asize, nextSize, extendSize;
+    asize = adjust_and_align(size);
+
     /* if ptr is NULL it is the same as calling mm_malloc(size) */
     if(ptr == NULL) {
         return mm_malloc(size);
@@ -218,20 +220,59 @@ void *mm_realloc(void *ptr, size_t size){
         mm_free(ptr);
         return;
     }
-    else {
-        if((newp = mm_malloc(size)) == NULL) {
-            printf("ERROR: mm_malloc failed in mm_realloc\n");
-            exit(1);
-        }
-        copySize = GET_SIZE(HDRP(ptr));
-        if(size < copySize) {
-            copySize = size;
-        }
+    copySize = GET_SIZE(HDRP(ptr));
+    if (asize <= copySize) {
+        return ptr;
+    }
+    
 
-        memcpy(newp, ptr, copySize);
-        mm_free(ptr);
-        return newp;
-    } 
+    /* Special Cases -
+        next block is free and big enough
+        next block is free but not big enough but is at the end
+        our ptr block is the last block
+    */
+
+   
+    nextSize = GET_SIZE(HDRP(NEXT_BLKP(ptr))); //size of the next block
+    
+    /*Case 1 -  check if next block is free and big enough */
+    if(!GET_ALLOC(HDRP(NEXT_BLKP(ptr))) && nextSize + copySize >= asize) {
+        remove_from_free_list(NEXT_BLKP(ptr));
+        PUT(HDRP(ptr), PACK(nextSize+copySize, 1));
+        PUT(FTRP(ptr), PACK(nextSize+copySize, 1));
+        return ptr;
+    }
+    /*Case 2 - check if next block is free and the last block */
+    else if(!GET_ALLOC(HDRP(NEXT_BLKP(ptr))) && nextSize  == 0) {
+        extendSize = MAX(asize - (copySize + nextSize), CHUNKSIZE);
+        newp = extend_heap(extendSize/WSIZE);
+        coalesce(newp);
+        remove_from_free_list(NEXT_BLKP(ptr));
+        nextSize = GET_SIZE(HDRP(NEXT_BLKP(ptr)));
+        PUT(HDRP(ptr), PACK(nextSize+copySize,1));
+        PUT(FTRP(ptr), PACK(nextSize+copySize,1));
+        return ptr;
+    }
+
+
+    /* Case 3 - check if current block is at the end */
+
+
+    /* if nothing above works, we just malloc a new block and return it */
+    if((newp = mm_malloc(size)) == NULL) {
+        printf("ERROR: mm_malloc failed in mm_realloc\n");
+        exit(1);
+    }
+
+    copySize = GET_SIZE(HDRP(ptr));
+    if(size < copySize) {
+        copySize = size;
+    }
+
+    memcpy(newp, ptr, copySize);
+    mm_free(ptr);
+    return newp;
+    
 }
 
 /*
@@ -332,7 +373,6 @@ static void *extend_heap(size_t words) {
   PUT(HDRP(bp), PACK(size, 0));         /* free block header */
   PUT(FTRP(bp), PACK(size, 0));         /* free block footer */
   PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1)); /* new epilogue header */
-  
   
   return coalesce(bp);
 }
