@@ -131,7 +131,7 @@ static void printblock(void *bp);
 int mm_check();
 static void insert_into_free_list(void *bp);
 static void remove_from_free_list(void *bp);
-
+static size_t adjust_and_align(size_t size);
 /*
  * mm_init - Initialize the memory manager
  */
@@ -173,11 +173,8 @@ void *mm_malloc(size_t size)
     return (NULL);
 
   /* Adjust block size to include overhead and alignment reqs. */
-  if (size <= DSIZE)
-    asize =  DSIZE + OVERHEAD;
-  else
-    asize = DSIZE * ((size + OVERHEAD + (DSIZE - 1)) / DSIZE);
-
+  asize = adjust_and_align(size);
+  
   /* Search the free list for a fit. */
   if ((bp = find_fit(asize)) != NULL) {
     place(bp, asize);
@@ -211,28 +208,31 @@ void mm_free(void *bp){
 void *mm_realloc(void *ptr, size_t size){
     void *newp;
     size_t copySize;
+    /* if ptr is NULL it is the same as calling mm_malloc(size) */
     if(ptr == NULL) {
         return mm_malloc(size);
     }
     
-    if(size == 0) {
+    /* if size is 0 it is the same as calling mm_free(ptr) */
+    else if(size == 0) {
         mm_free(ptr);
         return;
     }
-    if((newp = mm_malloc(size)) == NULL) {
-        printf("ERROR: mm_malloc failed in mm_realloc\n");
-        exit(1);
-    }
-    copySize = GET_SIZE(HDRP(ptr));
-    if(size < copySize) {
-        copySize = size;
-    }
+    else {
+        if((newp = mm_malloc(size)) == NULL) {
+            printf("ERROR: mm_malloc failed in mm_realloc\n");
+            exit(1);
+        }
+        copySize = GET_SIZE(HDRP(ptr));
+        if(size < copySize) {
+            copySize = size;
+        }
 
-    memcpy(newp, ptr, copySize);
-    mm_free(ptr);
-    return newp;
-} 
-
+        memcpy(newp, ptr, copySize);
+        mm_free(ptr);
+        return newp;
+    } 
+}
 
 /*
  * Checks the heap for consistency. Returns a nonzero value if and only if
@@ -480,4 +480,14 @@ static void checkblock(void *bp) {
     printf("Error: %p is not doubleword aligned\n", bp);
   if (GET(HDRP(bp)) != GET(FTRP(bp)))
     printf("Error: header does not match footer\n");
+}
+
+static size_t adjust_and_align(size_t size) {
+    size_t asize;
+    if (size <= DSIZE)
+        asize =  DSIZE + OVERHEAD;
+    else
+        asize = DSIZE * ((size + OVERHEAD + (DSIZE - 1)) / DSIZE);
+
+    return asize;
 }
