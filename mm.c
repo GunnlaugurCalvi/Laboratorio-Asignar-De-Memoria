@@ -214,13 +214,13 @@ void *mm_malloc(size_t size)
     /* Search the free list for a fit. */
     if ((bp = find_fit(asize)) != NULL) {
         place(bp, asize);
-        return bp;
-    }
+		return bp;
+	}
 
     /* No fit found.  Get more memory and place the block. */
     extendsize = MAX(asize, CHUNKSIZE);
     if ((bp = extend_heap(extendsize / WSIZE)) == NULL){  
-        return NULL;
+		return NULL;
 	}
     
     place(bp, asize);
@@ -368,7 +368,7 @@ int mm_check(void) {
             int found = 0;
             for(temp_ptr = free_listp; GET_ALLOC(HDRP(temp_ptr)) == 0; temp_ptr = NEXT_FREE(temp_ptr)){
                 if(temp_ptr == bp){
-                    found = 1;
+					found = 1;
 					break;
                 }
             }
@@ -503,11 +503,14 @@ static void *coalesce(void *bp){
     /* checks if previous block is allocated or if we are at the front of the heap */
     size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))) || PREV_BLKP(bp) == bp;
     size_t size = GET_SIZE(HDRP(bp));
-    if(prev_alloc && next_alloc) {
-        insertBlock(bp);
-        return bp;
+    /* Case 1 - Both adjacent blocks are allocated 
+	*			thus no coalescing is possible
+	*/
+	if(prev_alloc && next_alloc) {
+		insertBlock(bp);
+		return bp;
     }
-    /* Case 1 - only the next block is free
+    /* Case 2 - only the next block is free
     *            here we remove the next block from the free list
     *            and make a new block with the combined size of
     *            current block and next block
@@ -520,7 +523,7 @@ static void *coalesce(void *bp){
         insertBlock(bp);
         return bp;
     }
-    /* Case 2 - only the prevous block is free
+    /* Case 3 - only the prevous block is free
     *        here we remove from the free list
     *        and make a new block with combined size of
     *        current block and previous block
@@ -534,7 +537,7 @@ static void *coalesce(void *bp){
         insertBlock(bp);
         return bp;
     }
-    /* Case 3 - both next and previous blocks are free
+    /* Case 4 - both next and previous blocks are free
     *        here we remove both next and previous blocks
     *        from the free list and make a new block with a combined
     *        size of previous, current and next blocks
