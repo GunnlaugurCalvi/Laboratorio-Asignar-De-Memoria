@@ -149,6 +149,7 @@ inline char* PREV_BLKP(char* bp) {
 static char *heap_listp = 0; /* pointer to the first block */
 static char *free_listp = 0; /*pointer to the beginning of our free list */
 
+
 /* Function prototypes for internal helper routines */
 static void *coalesce(void *bp);
 static void *extend_heap(size_t words);
@@ -160,6 +161,7 @@ int mm_check();
 static void insertBlock(void *bp);
 static void removeBlock(void *bp);
 static size_t adjust_and_align(size_t size);
+static void *find_best_fit(size_t asize);
 /*
  * mm_init - Initialize the memory manager
  */
@@ -440,17 +442,44 @@ static void *extend_heap(size_t words) {
  * If no such fit is found we return NULL
  */
 static void *find_fit(size_t asize){
-
     void *bp;
     for (bp = free_listp; GET_ALLOC(HDRP(bp)) == 0; bp = NEXT_FREE(bp) ){
         if (asize <= (size_t)GET_SIZE(HDRP(bp)) ) {
             return bp;
         }
     }
+
     return NULL;
 }
 
+/*Find_best_fit - best fit algorithm for finding a free block
+ *          here we traverse the free list and find the free block
+ *          with the closest size to aSize
+ *
+ * This algorithm did worse in performance than the first fit one
+ * so we are not using this one now 
+ */
+static void *find_best_fit(size_t asize) {
+    /*testing best fit */
+    void *bp;
+    void *best = NULL;
+    
+    
+    for(bp = free_listp; GET_ALLOC(HDRP(bp)) == 0; bp = NEXT_FREE(bp)) {
+        size_t currSize = GET_SIZE(HDRP(bp));
+        if(asize == currSize) {
+            return bp;
+        }
+        else if(asize < currSize) {
+            if(best == NULL || GET_SIZE(HDRP(bp)) < GET_SIZE(HDRP(bp))) {
+                best = bp;
+            }
+        }
+    }
+    
+    return best;
 
+}
 /*
  * place - Place block of asize bytes at start of free block bp
  *          and split if remainder would be at least minimum block size
