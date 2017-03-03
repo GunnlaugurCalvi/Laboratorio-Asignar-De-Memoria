@@ -628,10 +628,11 @@ static void checkblock(void *bp) {
 
 static size_t adjust_and_align(size_t size) {
     size_t asize;
-    if (size <= DSIZE)
+    if (size <= DSIZE){
         asize =  DSIZE + OVERHEAD;
-    else
+    }
+	else{
         asize = DSIZE * ((size + OVERHEAD + (DSIZE - 1)) / DSIZE);
-
+	}
     return asize;
 }
