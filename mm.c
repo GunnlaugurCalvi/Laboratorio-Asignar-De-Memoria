@@ -271,11 +271,11 @@ void *mm_realloc(void *ptr, size_t size){
     
     copySize = GET_SIZE(HDRP(ptr)); //size of the block pointed to by ptr */
     
-    /* if realloc is requesting less size we just return the pointer */
-    if (asize <= copySize) {
+    /* if adjusted size is same as current ptr, just return ptr */
+    if (asize == copySize) {
         return ptr;
     }
-    
+
 
     /* Special Cases -
         next block is free and big enough
